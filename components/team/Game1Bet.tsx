@@ -14,6 +14,14 @@ interface Game1BetProps {
 
 const MIN_BET = 100000 // 最低ベット額: 10万AR
 
+// 投資先の候補
+const TARGETS = [
+  { id: 'konosuke', name: 'Konosukeさん' },
+  { id: 'yamazaki', name: 'Yamazakiさん' },
+  { id: 'momose', name: 'Momoseさん' },
+  { id: 'marina', name: 'Marinaさん' }
+]
+
 export function Game1Bet({ teamId, teamBalance, isTimerExpired = false }: Game1BetProps) {
   const [target, setTarget] = useState('')
   const [amount, setAmount] = useState('')
@@ -106,15 +114,32 @@ export function Game1Bet({ teamId, teamBalance, isTimerExpired = false }: Game1B
 
         <div>
           <label className="text-zinc-400 text-sm mb-2 block">
-            投資先（ターゲット名）
+            投資先を選択
           </label>
-          <Input
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            placeholder="例: Executive A"
-            className="bg-zinc-800 border-zinc-700 text-white"
-            disabled={isButtonDisabled}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            {TARGETS.map((t) => (
+              <Button
+                key={t.id}
+                type="button"
+                onClick={() => setTarget(t.name)}
+                variant={target === t.name ? 'default' : 'outline'}
+                className={
+                  target === t.name
+                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-500'
+                    : 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-white'
+                }
+                size="lg"
+                disabled={isButtonDisabled}
+              >
+                {t.name}
+              </Button>
+            ))}
+          </div>
+          {target && (
+            <p className="text-yellow-400 text-sm mt-2 text-center">
+              選択中: <span className="font-bold">{target}</span>
+            </p>
+          )}
         </div>
 
         <div>

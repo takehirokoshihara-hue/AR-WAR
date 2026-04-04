@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
+// Game 1 投資先候補（チーム画面と同じ）
+const TARGETS = [
+  { id: 'konosuke', name: 'Konosukeさん' },
+  { id: 'yamazaki', name: 'Yamazakiさん' },
+  { id: 'momose', name: 'Momoseさん' },
+  { id: 'marina', name: 'Marinaさん' }
+]
+
 export function GameControl() {
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [game1Winner, setGame1Winner] = useState('')
@@ -305,13 +313,30 @@ export function GameControl() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-zinc-400 text-sm">勝者 (ターゲット名)</label>
-            <Input
-              value={game1Winner}
-              onChange={(e) => setGame1Winner(e.target.value)}
-              placeholder="例: Executive A"
-              className="bg-zinc-800 border-zinc-700 text-white"
-            />
+            <label className="text-zinc-400 text-sm mb-2 block">勝者を選択</label>
+            <div className="grid grid-cols-2 gap-2">
+              {TARGETS.map((t) => (
+                <Button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setGame1Winner(t.name)}
+                  variant={game1Winner === t.name ? 'default' : 'outline'}
+                  className={
+                    game1Winner === t.name
+                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                      : 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700'
+                  }
+                  disabled={isLoading}
+                >
+                  {t.name}
+                </Button>
+              ))}
+            </div>
+            {game1Winner && (
+              <p className="text-yellow-400 text-sm mt-2 text-center">
+                勝者: <span className="font-bold">{game1Winner}</span>
+              </p>
+            )}
           </div>
           <div>
             <label className="text-zinc-400 text-sm">オッズ (倍率)</label>
