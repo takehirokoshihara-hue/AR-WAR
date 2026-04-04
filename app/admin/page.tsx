@@ -90,21 +90,38 @@ export default function AdminPage() {
     if (!confirm(`${teamName}に30万ARを融資しますか？（返済額：50万AR）`)) return
 
     setIsLoading(true)
-    const response = await fetch('/api/team/loan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team_id: teamId })
-    })
+    try {
+      const response = await fetch('/api/team/loan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: teamId })
+      })
 
-    if (response.ok) {
-      const result = await response.json()
-      alert(`融資完了！\n新しい残高: ${result.new_balance.toLocaleString()} AR\n借金回数: ${result.debt_count}`)
-    } else {
-      const error = await response.json()
-      console.error('Loan error:', error)
-      alert(`融資エラー: ${error.error}\n\nヒント: ${error.hint || 'DBマイグレーションが必要な可能性があります'}\n\n詳細はコンソールを確認してください。`)
+      if (response.ok) {
+        const result = await response.json()
+        alert(`融資完了！\n新しい残高: ${result.new_balance.toLocaleString()} AR\n借金回数: ${result.debt_count}`)
+      } else {
+        let errorMessage = `HTTPステータス: ${response.status}`
+        try {
+          const error = await response.json()
+          console.error('Loan error response:', error)
+          errorMessage = error.error || error.message || errorMessage
+          if (error.hint) errorMessage += `\n\nヒント: ${error.hint}`
+          if (error.details) errorMessage += `\n詳細: ${error.details}`
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError)
+          const textError = await response.text()
+          console.error('Error response text:', textError)
+          errorMessage += `\n生のレスポンス: ${textError}`
+        }
+        alert(`融資エラー: ${errorMessage}\n\nDBマイグレーションが完了しているか「🔍 DB状態チェック」で確認してください。`)
+      }
+    } catch (error) {
+      console.error('Loan request failed:', error)
+      alert(`融資リクエスト失敗: ${error instanceof Error ? error.message : '不明なエラー'}\n\nネットワーク接続を確認してください。`)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const checkDatabase = async () => {
@@ -114,21 +131,34 @@ export default function AdminPage() {
       const data = await response.json()
 
       console.log('=== Database Check Results ===')
-      console.log(data)
+      console.log(JSON.stringify(data, null, 2))
       console.log('==============================')
 
+      // 環境変数チェック
+      let envWarning = ''
+      if (data.environment?.supabase_url === 'Missing' || data.environment?.supabase_key === 'Missing') {
+        envWarning = '⚠️ Supabase環境変数が設定されていません！\n.env.localファイルを確認してください。\n\n'
+      }
+
       if (data.health?.ready_for_production) {
-        alert('✅ データベースは正常です！\n\n全ての機能が使用可能です。')
+        alert(`✅ データベースは正常です！\n\n${envWarning}全ての機能が使用可能です。\n\n詳細はコンソール（F12）を確認してください。`)
       } else {
         const issues = data.recommendations?.map((r: any) =>
           r.issue ? `❌ ${r.issue}\n   SQL: ${r.action}` : `✅ ${r.message}`
         ).join('\n\n')
 
-        alert(`⚠️ データベースに問題があります\n\n${issues}\n\n詳細はコンソール（F12）を確認してください。`)
+        const teamInfo = data.checks?.teams
+        let teamDebug = ''
+        if (teamInfo) {
+          teamDebug = `\n\nTeamsテーブル情報:\n- アクセス可能: ${teamInfo.accessible ? 'はい' : 'いいえ'}\n- カラム数: ${teamInfo.sample_columns?.length || 0}\n- debt_count存在: ${teamInfo.has_debt_count ? 'はい' : 'いいえ'}`
+          if (teamInfo.error) teamDebug += `\n- エラー: ${teamInfo.error}`
+        }
+
+        alert(`⚠️ データベースに問題があります\n\n${envWarning}${issues}${teamDebug}\n\n詳細はコンソール（F12）を確認してください。`)
       }
     } catch (error) {
       console.error('DB check error:', error)
-      alert('DBチェックに失敗しました。コンソールを確認してください。')
+      alert(`DBチェックに失敗しました。\n\nエラー: ${error instanceof Error ? error.message : '不明なエラー'}\n\nコンソール（F12）を確認してください。`)
     }
     setIsLoading(false)
   }
@@ -155,7 +185,7 @@ export default function AdminPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-2xl neon-green">チーム管理</CardTitle>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger>
+              <DialogTrigger asChild>
                 <Button className="bg-green-600 hover:bg-green-700">
                   + チーム追加
                 </Button>

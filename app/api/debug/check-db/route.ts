@@ -9,6 +9,11 @@ export async function GET() {
   try {
     const results: any = {
       timestamp: new Date().toISOString(),
+      environment: {
+        supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
+        supabase_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
+        node_env: process.env.NODE_ENV
+      },
       checks: {}
     }
 
@@ -21,8 +26,12 @@ export async function GET() {
     results.checks.teams = {
       accessible: !teamsError,
       error: teamsError?.message || null,
+      error_details: teamsError?.details || null,
+      error_hint: teamsError?.hint || null,
       sample_columns: teamsData?.[0] ? Object.keys(teamsData[0]) : [],
-      has_debt_count: teamsData?.[0] ? 'debt_count' in teamsData[0] : false
+      has_debt_count: teamsData?.[0] ? 'debt_count' in teamsData[0] : false,
+      sample_data: teamsData?.[0] || null,
+      count: teamsData?.length || 0
     }
 
     // 2. game_state テーブルの構造確認
