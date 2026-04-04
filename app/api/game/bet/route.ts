@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+const MIN_BET_GAME1 = 100000 // Game 1の最低ベット額: 10万AR
+
 export async function POST(request: NextRequest) {
   try {
     const { team_id, game, target, amount } = await request.json()
@@ -8,6 +10,14 @@ export async function POST(request: NextRequest) {
     if (!team_id || !game || !target || !amount || amount <= 0) {
       return NextResponse.json(
         { error: 'Invalid parameters' },
+        { status: 400 }
+      )
+    }
+
+    // Game 1の最低ベット額チェック
+    if (game === 'game1' && amount < MIN_BET_GAME1) {
+      return NextResponse.json(
+        { error: `Game 1 requires minimum bet of ${MIN_BET_GAME1} AR` },
         { status: 400 }
       )
     }

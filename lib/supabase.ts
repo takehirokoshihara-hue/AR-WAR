@@ -17,6 +17,7 @@ export type GameState = {
   id: number
   phase: string
   metadata: Record<string, any>
+  ends_at: string | null
 }
 
 export type Bet = {

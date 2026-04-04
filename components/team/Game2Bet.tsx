@@ -4,16 +4,28 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 interface Game2BetProps {
   teamId: string
   teamBalance: number
+  isTimerExpired?: boolean
 }
 
-export function Game2Bet({ teamId, teamBalance }: Game2BetProps) {
+export function Game2Bet({ teamId, teamBalance, isTimerExpired = false }: Game2BetProps) {
   const [choice, setChoice] = useState<'A' | 'B' | null>(null)
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  const addAmount = (add: number) => {
+    const current = parseInt(amount) || 0
+    const newAmount = current + add
+    setAmount(newAmount.toString())
+  }
+
+  const setAllIn = () => {
+    setAmount(teamBalance.toString())
+  }
 
   const placeBet = async () => {
     if (!choice || !amount || parseInt(amount) <= 0) {
@@ -60,6 +72,12 @@ export function Game2Bet({ teamId, teamBalance }: Game2BetProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isTimerExpired && (
+          <Badge className="w-full justify-center bg-zinc-700 text-white text-base py-2">
+            ⏱️ 時間切れ - ベット不可
+          </Badge>
+        )}
+
         <div>
           <label className="text-zinc-400 text-sm mb-2 block">
             選択肢を選ぶ
@@ -70,6 +88,7 @@ export function Game2Bet({ teamId, teamBalance }: Game2BetProps) {
               variant={choice === 'A' ? 'default' : 'outline'}
               className={choice === 'A' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700'}
               size="lg"
+              disabled={isTimerExpired}
             >
               選択肢 A
             </Button>
@@ -78,6 +97,7 @@ export function Game2Bet({ teamId, teamBalance }: Game2BetProps) {
               variant={choice === 'B' ? 'default' : 'outline'}
               className={choice === 'B' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700'}
               size="lg"
+              disabled={isTimerExpired}
             >
               選択肢 B
             </Button>
@@ -93,14 +113,43 @@ export function Game2Bet({ teamId, teamBalance }: Game2BetProps) {
             onChange={(e) => setAmount(e.target.value)}
             placeholder="100000"
             className="bg-zinc-800 border-zinc-700 text-white"
+            disabled={isTimerExpired}
           />
+
+          {/* クイックボタン */}
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <Button
+              type="button"
+              onClick={() => addAmount(100000)}
+              disabled={isTimerExpired}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white text-sm py-2"
+            >
+              +10万
+            </Button>
+            <Button
+              type="button"
+              onClick={() => addAmount(500000)}
+              disabled={isTimerExpired}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white text-sm py-2"
+            >
+              +50万
+            </Button>
+            <Button
+              type="button"
+              onClick={setAllIn}
+              disabled={isTimerExpired}
+              className="bg-red-700 hover:bg-red-600 text-white text-sm py-2 font-bold"
+            >
+              ALL IN
+            </Button>
+          </div>
         </div>
         <Button
           onClick={placeBet}
-          disabled={isLoading || !choice}
-          className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-6"
+          disabled={isLoading || !choice || isTimerExpired}
+          className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-6 disabled:bg-zinc-700 disabled:text-zinc-500"
         >
-          {isLoading ? 'ベット中...' : 'ベットする'}
+          {isLoading ? 'ベット中...' : isTimerExpired ? '時間切れ' : 'ベットする'}
         </Button>
         <div className="bg-zinc-800 p-4 rounded text-sm text-zinc-400">
           <p className="mb-2">📌 ルール:</p>

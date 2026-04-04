@@ -131,6 +131,49 @@ export function GameControl() {
     }
   }
 
+  const startTimer = async (seconds: number) => {
+    setIsLoading(true)
+    const response = await fetch('/api/game/set-timer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seconds })
+    })
+
+    if (response.ok) {
+      alert(`タイマー開始: ${seconds}秒`)
+    } else {
+      alert('タイマー設定失敗')
+    }
+    setIsLoading(false)
+  }
+
+  const clearTimer = async () => {
+    setIsLoading(true)
+    const response = await fetch('/api/game/clear-timer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    if (response.ok) {
+      alert('タイマークリア')
+    }
+    setIsLoading(false)
+  }
+
+  const triggerSound = async (soundEvent: string) => {
+    const response = await fetch('/api/game/trigger-sound', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sound_event: soundEvent })
+    })
+
+    if (response.ok) {
+      console.log(`Sound triggered: ${soundEvent}`)
+    } else {
+      alert('サウンド再生失敗')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="bg-zinc-900 border-zinc-800">
@@ -179,6 +222,57 @@ export function GameControl() {
               Game 3
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-zinc-900 border-zinc-800">
+        <CardHeader>
+          <CardTitle className="text-xl text-cyan-400">⏱️ カウントダウンタイマー</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-4 gap-2">
+            <Button
+              onClick={() => startTimer(30)}
+              disabled={isLoading}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
+              30秒
+            </Button>
+            <Button
+              onClick={() => startTimer(60)}
+              disabled={isLoading}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
+              60秒
+            </Button>
+            <Button
+              onClick={() => startTimer(90)}
+              disabled={isLoading}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
+              90秒
+            </Button>
+            <Button
+              onClick={() => startTimer(120)}
+              disabled={isLoading}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
+              120秒
+            </Button>
+          </div>
+          <Button
+            onClick={clearTimer}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+          >
+            タイマークリア
+          </Button>
+          {gameState?.ends_at && (
+            <p className="text-zinc-400 text-sm text-center">
+              終了予定: {new Date(gameState.ends_at).toLocaleTimeString('ja-JP')}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -302,6 +396,43 @@ export function GameControl() {
               <p className="text-yellow-400 font-mono">{gameState.metadata.highest_bid} AR</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="bg-zinc-900 border-zinc-800">
+        <CardHeader>
+          <CardTitle className="text-xl text-purple-400">🔊 BGM・SE コントロール</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={() => triggerSound('drumroll')}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              🥁 ドラムロール
+            </Button>
+            <Button
+              onClick={() => triggerSound('fanfare')}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              🎺 ジャジャーン
+            </Button>
+            <Button
+              onClick={() => triggerSound('gavel')}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              🔨 カーン（落札）
+            </Button>
+            <Button
+              onClick={() => triggerSound('sad')}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              😱 ガーン（没収）
+            </Button>
+          </div>
+          <p className="text-zinc-500 text-xs text-center">
+            メインスクリーンでサウンドが再生されます
+          </p>
         </CardContent>
       </Card>
     </div>

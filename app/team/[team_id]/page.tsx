@@ -9,6 +9,7 @@ import { Game1Bet } from '@/components/team/Game1Bet'
 import { Game2Bet } from '@/components/team/Game2Bet'
 import { Game3Bid } from '@/components/team/Game3Bid'
 import { ARCounter } from '@/components/effects/ARCounter'
+import { CountdownTimer } from '@/components/effects/CountdownTimer'
 
 export default function TeamPage() {
   const params = useParams()
@@ -16,6 +17,7 @@ export default function TeamPage() {
   const [team, setTeam] = useState<Team | null>(null)
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isTimerExpired, setIsTimerExpired] = useState(false)
 
   useEffect(() => {
     fetchTeamData()
@@ -83,6 +85,25 @@ export default function TeamPage() {
     return amount.toLocaleString() + ' AR'
   }
 
+  const handleTimerExpire = () => {
+    setIsTimerExpired(true)
+  }
+
+  // タイマーが変更されたらリセット
+  useEffect(() => {
+    if (gameState?.ends_at) {
+      const now = Date.now()
+      const end = new Date(gameState.ends_at).getTime()
+      const remaining = Math.max(0, Math.floor((end - now) / 1000))
+
+      if (remaining > 0) {
+        setIsTimerExpired(false)
+      }
+    } else {
+      setIsTimerExpired(false)
+    }
+  }, [gameState?.ends_at])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -144,6 +165,12 @@ export default function TeamPage() {
           </CardContent>
         </Card>
 
+        {gameState?.ends_at && gameState?.phase !== 'lobby' && (
+          <div className="mb-8">
+            <CountdownTimer endsAt={gameState.ends_at} onExpire={handleTimerExpire} />
+          </div>
+        )}
+
         {gameState?.phase === 'lobby' && (
           <Card className="bg-zinc-900 border-zinc-800">
             <CardContent className="p-8 text-center">
@@ -158,15 +185,15 @@ export default function TeamPage() {
         )}
 
         {gameState?.phase === 'game1' && (
-          <Game1Bet teamId={teamId} teamBalance={team.ar_balance} />
+          <Game1Bet teamId={teamId} teamBalance={team.ar_balance} isTimerExpired={isTimerExpired} />
         )}
 
         {gameState?.phase === 'game2' && (
-          <Game2Bet teamId={teamId} teamBalance={team.ar_balance} />
+          <Game2Bet teamId={teamId} teamBalance={team.ar_balance} isTimerExpired={isTimerExpired} />
         )}
 
         {gameState?.phase === 'game3' && (
-          <Game3Bid teamId={teamId} teamBalance={team.ar_balance} />
+          <Game3Bid teamId={teamId} teamBalance={team.ar_balance} isTimerExpired={isTimerExpired} />
         )}
       </div>
     </div>

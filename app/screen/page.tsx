@@ -1,26 +1,38 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase, type Team } from '@/lib/supabase'
+import { supabase, type Team, type GameState } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ARCounter } from '@/components/effects/ARCounter'
+import { CountdownTimer } from '@/components/effects/CountdownTimer'
+import { SoundPlayer } from '@/components/effects/SoundPlayer'
 
 export default function ScreenPage() {
   const [teams, setTeams] = useState<Team[]>([])
+  const [gameState, setGameState] = useState<GameState | null>(null)
 
   useEffect(() => {
     fetchTeams()
+    fetchGameState()
 
-    const channel = supabase
+    const teamsChannel = supabase
       .channel('screen-teams-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
         fetchTeams()
       })
       .subscribe()
 
+    const gameChannel = supabase
+      .channel('screen-game-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_state' }, (payload) => {
+        setGameState(payload.new as GameState)
+      })
+      .subscribe()
+
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(teamsChannel)
+      supabase.removeChannel(gameChannel)
     }
   }, [])
 
@@ -34,6 +46,20 @@ export default function ScreenPage() {
       console.error('Error fetching teams:', error)
     } else {
       setTeams(data || [])
+    }
+  }
+
+  const fetchGameState = async () => {
+    const { data, error } = await supabase
+      .from('game_state')
+      .select('*')
+      .eq('id', 1)
+      .single()
+
+    if (error) {
+      console.error('Error fetching game state:', error)
+    } else {
+      setGameState(data)
     }
   }
 
@@ -57,6 +83,10 @@ export default function ScreenPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
+      <SoundPlayer
+        soundEvent={gameState?.metadata?.sound_event || null}
+        soundTriggerId={gameState?.metadata?.sound_trigger_id || null}
+      />
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-8xl font-bold neon-gold mb-4 tracking-wider">
@@ -66,6 +96,12 @@ export default function ScreenPage() {
             リアルタイム・ランキング
           </p>
         </div>
+
+        {gameState?.ends_at && (
+          <div className="mb-8 max-w-md mx-auto">
+            <CountdownTimer endsAt={gameState.ends_at} />
+          </div>
+        )}
 
         {teams.length === 0 ? (
           <Card className="bg-zinc-900 border-zinc-800">

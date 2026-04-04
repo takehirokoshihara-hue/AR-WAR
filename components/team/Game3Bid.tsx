@@ -10,12 +10,23 @@ import { Badge } from '@/components/ui/badge'
 interface Game3BidProps {
   teamId: string
   teamBalance: number
+  isTimerExpired?: boolean
 }
 
-export function Game3Bid({ teamId, teamBalance }: Game3BidProps) {
+export function Game3Bid({ teamId, teamBalance, isTimerExpired = false }: Game3BidProps) {
   const [bidAmount, setBidAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [gameState, setGameState] = useState<GameState | null>(null)
+
+  const addAmount = (add: number) => {
+    const current = parseInt(bidAmount) || 0
+    const newAmount = current + add
+    setBidAmount(newAmount.toString())
+  }
+
+  const setAllIn = () => {
+    setBidAmount(teamBalance.toString())
+  }
 
   useEffect(() => {
     fetchGameState()
@@ -99,6 +110,12 @@ export function Game3Bid({ teamId, teamBalance }: Game3BidProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isTimerExpired && (
+          <Badge className="w-full justify-center bg-zinc-700 text-white text-base py-2">
+            ⏱️ 時間切れ - 入札不可
+          </Badge>
+        )}
+
         <div className="bg-zinc-800 p-4 rounded">
           <p className="text-zinc-400 text-sm mb-2">現在の最高入札額</p>
           <p className="text-4xl font-bold neon-gold font-mono">
@@ -121,15 +138,44 @@ export function Game3Bid({ teamId, teamBalance }: Game3BidProps) {
             onChange={(e) => setBidAmount(e.target.value)}
             placeholder={`${currentHighestBid + 1} 以上`}
             className="bg-zinc-800 border-zinc-700 text-white"
+            disabled={isTimerExpired}
           />
+
+          {/* クイックボタン */}
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <Button
+              type="button"
+              onClick={() => addAmount(100000)}
+              disabled={isTimerExpired}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white text-sm py-2"
+            >
+              +10万
+            </Button>
+            <Button
+              type="button"
+              onClick={() => addAmount(500000)}
+              disabled={isTimerExpired}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white text-sm py-2"
+            >
+              +50万
+            </Button>
+            <Button
+              type="button"
+              onClick={setAllIn}
+              disabled={isTimerExpired}
+              className="bg-red-700 hover:bg-red-600 text-white text-sm py-2 font-bold"
+            >
+              ALL IN
+            </Button>
+          </div>
         </div>
 
         <Button
           onClick={placeBid}
-          disabled={isLoading}
-          className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6"
+          disabled={isLoading || isTimerExpired}
+          className="w-full bg-red-600 hover:bg-red-700 text-white text-lg py-6 disabled:bg-zinc-700 disabled:text-zinc-500"
         >
-          {isLoading ? '入札中...' : '入札する'}
+          {isLoading ? '入札中...' : isTimerExpired ? '時間切れ' : '入札する'}
         </Button>
 
         <div className="bg-zinc-800 p-4 rounded text-sm text-zinc-400">
