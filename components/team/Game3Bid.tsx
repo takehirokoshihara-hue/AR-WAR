@@ -179,14 +179,14 @@ export function Game3Bid({ teamId, teamBalance, isTimerExpired = false }: Game3B
         </Button>
 
         <div className="bg-zinc-800 p-4 rounded text-sm text-zinc-400">
-          <p className="mb-2">📌 落札後の効果（司会者が選択）:</p>
+          <p className="mb-2">📌 オークションルール:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li className="text-blue-400">倍増: AR残高が2倍になる</li>
-            <li className="text-orange-400">半減: AR残高が半分になる</li>
-            <li className="text-red-400">略奪: 他チームのARを半分奪う</li>
+            <li>最高入札者が「封筒」を獲得します</li>
+            <li>3回のオークションを実施します</li>
+            <li>入札額は落札確定時に支払われます</li>
           </ul>
           <p className="mt-3 text-yellow-400">
-            ⚠️ 入札額は落札時に支払われます
+            ⚠️ 封筒の中身（効果）は開封まで不明です
           </p>
         </div>
       </CardContent>

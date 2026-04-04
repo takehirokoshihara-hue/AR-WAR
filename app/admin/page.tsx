@@ -15,6 +15,8 @@ export default function AdminPage() {
   const [newTeamName, setNewTeamName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null)
+  const [editingBalance, setEditingBalance] = useState<string>('')
 
   useEffect(() => {
     fetchTeams()
@@ -163,6 +165,57 @@ export default function AdminPage() {
     setIsLoading(false)
   }
 
+  const startEditingBalance = (teamId: string, currentBalance: number) => {
+    setEditingTeamId(teamId)
+    setEditingBalance(currentBalance.toString())
+  }
+
+  const cancelEditingBalance = () => {
+    setEditingTeamId(null)
+    setEditingBalance('')
+  }
+
+  const saveBalance = async (teamId: string, teamName: string) => {
+    const newBalance = parseInt(editingBalance)
+
+    if (isNaN(newBalance) || newBalance < 0) {
+      alert('有効な数値を入力してください')
+      return
+    }
+
+    if (!confirm(`${teamName}のAR残高を ${newBalance.toLocaleString()} AR に変更しますか？`)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/team/update-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          team_id: teamId,
+          new_balance: newBalance
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`✅ 残高を更新しました！\n\n${teamName}: ${result.new_balance.toLocaleString()} AR`)
+        setEditingTeamId(null)
+        setEditingBalance('')
+      } else {
+        const error = await response.json()
+        console.error('Balance update error:', error)
+        alert(`❌ 残高更新失敗\n\n${error.error}`)
+      }
+    } catch (error) {
+      console.error('Balance update request failed:', error)
+      alert(`❌ リクエスト失敗: ${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
@@ -250,8 +303,45 @@ export default function AdminPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono neon-gold">
-                        {formatAR(team.ar_balance)}
+                      <TableCell className="text-right">
+                        {editingTeamId === team.id ? (
+                          <div className="flex items-center gap-2 justify-end">
+                            <Input
+                              type="number"
+                              value={editingBalance}
+                              onChange={(e) => setEditingBalance(e.target.value)}
+                              className="w-32 bg-zinc-800 border-yellow-500 text-white text-right"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveBalance(team.id, team.name)
+                                if (e.key === 'Escape') cancelEditingBalance()
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => saveBalance(team.id, team.name)}
+                              className="bg-green-600 hover:bg-green-700 h-8 px-2"
+                            >
+                              ✓
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={cancelEditingBalance}
+                              className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 h-8 px-2"
+                            >
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditingBalance(team.id, team.ar_balance)}
+                            className="font-mono neon-gold hover:text-yellow-300 transition-colors cursor-pointer text-right w-full"
+                          >
+                            {formatAR(team.ar_balance)}
+                            <span className="ml-2 text-zinc-600 text-xs">✎</span>
+                          </button>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-1">

@@ -106,26 +106,35 @@ export function GameControl() {
     setIsLoading(false)
   }
 
-  const applyGame3Effect = async () => {
-    setIsLoading(true)
-    const response = await fetch('/api/game/game3-apply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        effect: game3Effect,
-        target_team_id: game3Effect === 'steal' ? game3Target : undefined
-      })
-    })
-
-    const result = await response.json()
-
-    if (response.ok) {
-      alert(`Game 3 effect applied! ${result.message}`)
-      await resetGame3Auction()
-    } else {
-      alert('Failed to apply effect: ' + result.error)
+  const confirmGame3Auction = async () => {
+    if (!confirm('最高入札者から入札額を確定しますか？\n\n※この操作で最高入札者のARが減額されます')) {
+      return
     }
-    setIsLoading(false)
+
+    setIsLoading(true)
+    try {
+      console.log('[Game3] Confirming auction')
+      const response = await fetch('/api/game/game3-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        console.log('[Game3] Auction confirmed:', result)
+        alert(`✅ 入札確定！\n\n落札者: ${result.winner_name}\n入札額: ${result.bid_amount.toLocaleString()} AR`)
+        await resetGame3Auction()
+      } else {
+        console.error('[Game3] Confirm failed:', result)
+        alert(`❌ 入札確定失敗: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('[Game3] Confirm request failed:', error)
+      alert(`❌ リクエスト失敗: ${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const resetGame3Auction = async () => {
@@ -376,55 +385,40 @@ export function GameControl() {
 
       <Card className="bg-zinc-900 border-zinc-800">
         <CardHeader>
-          <CardTitle className="text-xl text-red-400">Game 3: 効果適用</CardTitle>
+          <CardTitle className="text-xl text-red-400">Game 3: オークション管理</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-zinc-400 text-sm mb-2 block">効果を選択</label>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => setGame3Effect('double')}
-                variant={game3Effect === 'double' ? 'default' : 'outline'}
-                className={game3Effect === 'double' ? 'bg-blue-600' : 'bg-zinc-800 border-zinc-700'}
-              >
-                倍増
-              </Button>
-              <Button
-                onClick={() => setGame3Effect('halve')}
-                variant={game3Effect === 'halve' ? 'default' : 'outline'}
-                className={game3Effect === 'halve' ? 'bg-orange-600' : 'bg-zinc-800 border-zinc-700'}
-              >
-                半減
-              </Button>
-              <Button
-                onClick={() => setGame3Effect('steal')}
-                variant={game3Effect === 'steal' ? 'default' : 'outline'}
-                className={game3Effect === 'steal' ? 'bg-red-600' : 'bg-zinc-800 border-zinc-700'}
-              >
-                略奪
-              </Button>
+          {gameState?.metadata?.highest_bidder && (
+            <div className="p-4 bg-zinc-800 rounded border border-yellow-500/50">
+              <p className="text-zinc-400 text-sm mb-2">現在の最高入札</p>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-zinc-500 text-xs">入札者 (チームID)</p>
+                  <p className="text-white font-mono text-sm">{gameState.metadata.highest_bidder}</p>
+                </div>
+                <div>
+                  <p className="text-zinc-500 text-xs">入札額</p>
+                  <p className="text-yellow-400 font-mono text-2xl font-bold">
+                    {gameState.metadata.highest_bid?.toLocaleString() || 0} AR
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {game3Effect === 'steal' && (
-            <div>
-              <label className="text-zinc-400 text-sm">略奪ターゲット (チームID)</label>
-              <Input
-                value={game3Target}
-                onChange={(e) => setGame3Target(e.target.value)}
-                placeholder="Team ID"
-                className="bg-zinc-800 border-zinc-700 text-white"
-              />
+          {!gameState?.metadata?.highest_bidder && (
+            <div className="p-4 bg-zinc-800 rounded text-center">
+              <p className="text-zinc-500">まだ入札がありません</p>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-2">
             <Button
-              onClick={applyGame3Effect}
-              disabled={isLoading}
-              className="bg-red-600 hover:bg-red-700"
+              onClick={confirmGame3Auction}
+              disabled={isLoading || !gameState?.metadata?.highest_bidder}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-zinc-700"
             >
-              効果を適用
+              ✅ 入札確定
             </Button>
             <Button
               onClick={resetGame3Auction}
@@ -436,14 +430,15 @@ export function GameControl() {
             </Button>
           </div>
 
-          {gameState?.metadata?.highest_bidder && (
-            <div className="mt-4 p-4 bg-zinc-800 rounded">
-              <p className="text-zinc-400 text-sm">最高入札者</p>
-              <p className="text-white font-mono">{gameState.metadata.highest_bidder}</p>
-              <p className="text-zinc-400 text-sm mt-2">入札額</p>
-              <p className="text-yellow-400 font-mono">{gameState.metadata.highest_bid} AR</p>
-            </div>
-          )}
+          <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded text-sm text-blue-200">
+            <p className="font-semibold mb-1">💡 運用フロー:</p>
+            <ol className="list-decimal list-inside space-y-1 text-xs">
+              <li>チームが入札 → 最高入札額が更新される</li>
+              <li>「✅ 入札確定」→ 落札者のARから入札額を減額</li>
+              <li>「🔄 入札リセット」→ 次のラウンド準備</li>
+              <li>封筒開封後、下のチーム管理でARを手動調整</li>
+            </ol>
+          </div>
         </CardContent>
       </Card>
 
