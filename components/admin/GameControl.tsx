@@ -133,31 +133,54 @@ export function GameControl() {
 
   const startTimer = async (seconds: number) => {
     setIsLoading(true)
-    const response = await fetch('/api/game/set-timer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seconds })
-    })
+    try {
+      console.log(`[Timer] Starting timer: ${seconds} seconds`)
+      const response = await fetch('/api/game/set-timer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seconds })
+      })
 
-    if (response.ok) {
-      alert(`タイマー開始: ${seconds}秒`)
-    } else {
-      alert('タイマー設定失敗')
+      if (response.ok) {
+        const result = await response.json()
+        console.log('[Timer] Timer set successfully:', result)
+        alert(`✅ タイマー開始: ${seconds}秒\n\n終了時刻: ${new Date(result.ends_at).toLocaleTimeString('ja-JP')}`)
+      } else {
+        const error = await response.json()
+        console.error('[Timer] Failed to set timer:', error)
+        alert(`❌ タイマー設定失敗\n\nエラー: ${error.error}\nヒント: ${error.hint || 'ends_atカラムが存在するか確認してください'}`)
+      }
+    } catch (error) {
+      console.error('[Timer] Request failed:', error)
+      alert(`❌ タイマー設定失敗\n\n${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const clearTimer = async () => {
     setIsLoading(true)
-    const response = await fetch('/api/game/clear-timer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    })
+    try {
+      console.log('[Timer] Clearing timer')
+      const response = await fetch('/api/game/clear-timer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
 
-    if (response.ok) {
-      alert('タイマークリア')
+      if (response.ok) {
+        console.log('[Timer] Timer cleared successfully')
+        alert('✅ タイマークリア完了')
+      } else {
+        const error = await response.json()
+        console.error('[Timer] Failed to clear timer:', error)
+        alert(`❌ タイマークリア失敗\n\n${error.error}`)
+      }
+    } catch (error) {
+      console.error('[Timer] Clear request failed:', error)
+      alert(`❌ タイマークリア失敗\n\n${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const triggerSound = async (soundEvent: string) => {

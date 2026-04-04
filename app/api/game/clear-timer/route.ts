@@ -3,19 +3,40 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST() {
   try {
-    const { error } = await supabase
+    console.log('[Timer] Clearing timer (setting ends_at to null)')
+
+    const { data, error } = await supabase
       .from('game_state')
       .update({ ends_at: null })
       .eq('id', 1)
+      .select()
+      .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[Timer] Clear error:', error)
+      return NextResponse.json(
+        {
+          error: error.message,
+          details: error.details,
+          hint: error.hint
+        },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true })
+    console.log('[Timer] Timer cleared successfully:', data)
+
+    return NextResponse.json({
+      success: true,
+      game_state: data
+    })
   } catch (error) {
+    console.error('[Timer] Unexpected error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

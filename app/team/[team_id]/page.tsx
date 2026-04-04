@@ -86,6 +86,7 @@ export default function TeamPage() {
   }
 
   const handleTimerExpire = () => {
+    console.log('[Team] Timer expired - locking controls')
     setIsTimerExpired(true)
   }
 
@@ -96,10 +97,20 @@ export default function TeamPage() {
       const end = new Date(gameState.ends_at).getTime()
       const remaining = Math.max(0, Math.floor((end - now) / 1000))
 
+      console.log('[Team] Timer check:', {
+        ends_at: gameState.ends_at,
+        remaining,
+        is_expired: remaining === 0
+      })
+
       if (remaining > 0) {
         setIsTimerExpired(false)
+      } else if (remaining === 0) {
+        setIsTimerExpired(true)
       }
     } else {
+      // タイマーがクリアされた
+      console.log('[Team] Timer cleared - unlocking controls')
       setIsTimerExpired(false)
     }
   }, [gameState?.ends_at])

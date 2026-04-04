@@ -184,12 +184,13 @@ export default function AdminPage() {
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-2xl neon-green">チーム管理</CardTitle>
+            <Button
+              onClick={() => setIsDialogOpen(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              + チーム追加
+            </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-green-600 hover:bg-green-700">
-                  + チーム追加
-                </Button>
-              </DialogTrigger>
               <DialogContent className="bg-zinc-900 border-zinc-700">
                 <DialogHeader>
                   <DialogTitle className="text-xl neon-green">新規チーム追加</DialogTitle>

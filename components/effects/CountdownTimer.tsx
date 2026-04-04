@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface CountdownTimerProps {
@@ -10,12 +10,17 @@ interface CountdownTimerProps {
 
 export function CountdownTimer({ endsAt, onExpire }: CountdownTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
+  const hasExpiredRef = useRef(false)
 
   useEffect(() => {
     if (!endsAt) {
       setTimeRemaining(null)
+      hasExpiredRef.current = false
       return
     }
+
+    // 新しいタイマーが設定されたらリセット
+    hasExpiredRef.current = false
 
     const updateTimer = () => {
       const now = Date.now()
@@ -24,15 +29,26 @@ export function CountdownTimer({ endsAt, onExpire }: CountdownTimerProps) {
 
       setTimeRemaining(remaining)
 
-      if (remaining === 0 && onExpire) {
+      // onExpireを1回だけ呼ぶ
+      if (remaining === 0 && !hasExpiredRef.current && onExpire) {
+        console.log('[CountdownTimer] Timer expired, calling onExpire')
+        hasExpiredRef.current = true
         onExpire()
       }
     }
 
+    console.log('[CountdownTimer] Starting countdown:', {
+      endsAt,
+      now: new Date().toISOString()
+    })
+
     updateTimer()
     const interval = setInterval(updateTimer, 1000)
 
-    return () => clearInterval(interval)
+    return () => {
+      console.log('[CountdownTimer] Cleanup')
+      clearInterval(interval)
+    }
   }, [endsAt, onExpire])
 
   if (timeRemaining === null || !endsAt) {
