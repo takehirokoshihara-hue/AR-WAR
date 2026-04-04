@@ -22,44 +22,21 @@ npm install
 
 ### 2. Supabaseの設定
 
-Supabase SQL Editorで以下のSQLを実行（初回セットアップ時）：
+**重要**: 以下のいずれかの方法でDBマイグレーションを実行してください。
 
-```sql
--- 1. チームテーブル (初期資金1,000,000 AR)
-CREATE TABLE teams (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL UNIQUE,
-  ar_balance BIGINT NOT NULL DEFAULT 1000000,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+#### 方法1: 統合マイグレーションファイルを使用（推奨）
 
--- 2. ゲーム状態管理テーブル (常に id=1 の1レコードのみを使用)
-CREATE TABLE game_state (
-  id INT PRIMARY KEY DEFAULT 1,
-  phase TEXT NOT NULL DEFAULT 'lobby', 
-  metadata JSONB NOT NULL DEFAULT '{}'::jsonb
-);
+[`supabase-migration-all.sql`](supabase-migration-all.sql) の内容をコピーして、Supabase SQL Editorで実行してください。このファイルには全ての必要なテーブル作成とカラム追加が含まれています。
 
--- 3. ベット（賭け）履歴テーブル
-CREATE TABLE bets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  team_id UUID REFERENCES teams(id) NOT NULL,
-  game TEXT NOT NULL,
-  target TEXT NOT NULL,
-  amount BIGINT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Realtimeを有効化
-ALTER PUBLICATION supabase_realtime ADD TABLE teams;
-ALTER PUBLICATION supabase_realtime ADD TABLE game_state;
-ALTER PUBLICATION supabase_realtime ADD TABLE bets;
-
--- 初期データ: game_stateに1レコード挿入
-INSERT INTO game_state (id, phase, metadata) VALUES (1, 'lobby', '{}'::jsonb);
+```bash
+# ファイルの場所
+supabase-migration-all.sql
 ```
 
-**追加機能のマイグレーション:**
+#### 方法2: 手動でSQLを実行
+
+既にテーブルが作成済みの場合、以下の追加マイグレーションのみを実行：
+
 ```sql
 -- teams テーブルに debt_count カラムを追加（借金システム）
 ALTER TABLE teams ADD COLUMN IF NOT EXISTS debt_count INT NOT NULL DEFAULT 0;
@@ -67,6 +44,20 @@ UPDATE teams SET debt_count = 0 WHERE debt_count IS NULL;
 
 -- game_state に ends_at カラムを追加（カウントダウンタイマー）
 ALTER TABLE game_state ADD COLUMN IF NOT EXISTS ends_at TIMESTAMP WITH TIME ZONE;
+```
+
+#### マイグレーション確認
+
+SQLを実行後、以下のクエリでカラムが正しく追加されたか確認：
+
+```sql
+-- debt_count カラムの確認
+SELECT column_name, data_type FROM information_schema.columns 
+WHERE table_name = 'teams' AND column_name = 'debt_count';
+
+-- ends_at カラムの確認
+SELECT column_name, data_type FROM information_schema.columns 
+WHERE table_name = 'game_state' AND column_name = 'ends_at';
 ```
 
 ### 3. 環境変数の設定

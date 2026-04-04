@@ -21,13 +21,25 @@ export async function POST(request: NextRequest) {
       .eq('id', 1)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('Timer update error:', error)
+      return NextResponse.json(
+        {
+          error: error.message,
+          details: error.details || 'No details available',
+          hint: error.hint || 'Check if ends_at column exists in game_state table'
+        },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ success: true, ends_at: endsAt })
   } catch (error) {
+    console.error('Set timer API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

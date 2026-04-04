@@ -34,8 +34,13 @@ export async function POST(request: NextRequest) {
       .eq('id', team_id)
 
     if (updateError) {
+      console.error('Loan update error:', updateError)
       return NextResponse.json(
-        { error: updateError.message },
+        {
+          error: updateError.message,
+          details: updateError.details || 'No details available',
+          hint: updateError.hint || 'Check if debt_count column exists in teams table'
+        },
         { status: 500 }
       )
     }
@@ -46,8 +51,12 @@ export async function POST(request: NextRequest) {
       debt_count: team.debt_count + 1
     })
   } catch (error) {
+    console.error('Loan API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

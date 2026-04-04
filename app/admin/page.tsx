@@ -101,7 +101,34 @@ export default function AdminPage() {
       alert(`融資完了！\n新しい残高: ${result.new_balance.toLocaleString()} AR\n借金回数: ${result.debt_count}`)
     } else {
       const error = await response.json()
-      alert('融資エラー: ' + error.error)
+      console.error('Loan error:', error)
+      alert(`融資エラー: ${error.error}\n\nヒント: ${error.hint || 'DBマイグレーションが必要な可能性があります'}\n\n詳細はコンソールを確認してください。`)
+    }
+    setIsLoading(false)
+  }
+
+  const checkDatabase = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/debug/check-db')
+      const data = await response.json()
+
+      console.log('=== Database Check Results ===')
+      console.log(data)
+      console.log('==============================')
+
+      if (data.health?.ready_for_production) {
+        alert('✅ データベースは正常です！\n\n全ての機能が使用可能です。')
+      } else {
+        const issues = data.recommendations?.map((r: any) =>
+          r.issue ? `❌ ${r.issue}\n   SQL: ${r.action}` : `✅ ${r.message}`
+        ).join('\n\n')
+
+        alert(`⚠️ データベースに問題があります\n\n${issues}\n\n詳細はコンソール（F12）を確認してください。`)
+      }
+    } catch (error) {
+      console.error('DB check error:', error)
+      alert('DBチェックに失敗しました。コンソールを確認してください。')
     }
     setIsLoading(false)
   }
@@ -109,9 +136,19 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-zinc-950 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold neon-gold mb-2">THE AR WARS</h1>
-          <p className="text-zinc-400 text-lg">管理画面 - Admin Control Panel</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-bold neon-gold mb-2">THE AR WARS</h1>
+            <p className="text-zinc-400 text-lg">管理画面 - Admin Control Panel</p>
+          </div>
+          <Button
+            onClick={checkDatabase}
+            disabled={isLoading}
+            variant="outline"
+            className="bg-blue-600 hover:bg-blue-700 text-white border-blue-500"
+          >
+            🔍 DB状態チェック
+          </Button>
         </div>
 
         <Card className="bg-zinc-900 border-zinc-800">
