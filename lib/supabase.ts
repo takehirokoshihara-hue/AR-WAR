@@ -9,6 +9,7 @@ export type Team = {
   id: string
   name: string
   ar_balance: number
+  debt_count: number
   created_at: string
 }
 

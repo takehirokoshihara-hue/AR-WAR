@@ -1,36 +1,244 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# THE AR WARS
 
-## Getting Started
+リアルタイム対戦ギャンブルゲーム - チームが「AR（架空通貨）」を奪い合う3つのゲーム
 
-First, run the development server:
+## 🎮 ゲーム概要
 
+### Game 1: ザ・エグゼクティブ・ダービー
+投資型ベットゲーム。勝利したターゲットにベットしたチームがオッズに応じた配当を獲得。
+
+### Game 2: 裏切りのマイノリティ・ベット
+少数決サバイバル。AとBの選択肢で、少数派を選んだチームが全ベット額を山分け。
+
+### Game 3: ラスト・ギャンブル・オークション
+入札型直接対決。最高入札者が「倍増」「半減」「略奪」のいずれかの効果を受ける。
+
+## 🚀 セットアップ
+
+### 1. 依存パッケージのインストール
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Supabaseの設定
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Supabase SQL Editorで以下のSQLを実行（初回セットアップ時）：
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sql
+-- 1. チームテーブル (初期資金1,000,000 AR)
+CREATE TABLE teams (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL UNIQUE,
+  ar_balance BIGINT NOT NULL DEFAULT 1000000,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-## Learn More
+-- 2. ゲーム状態管理テーブル (常に id=1 の1レコードのみを使用)
+CREATE TABLE game_state (
+  id INT PRIMARY KEY DEFAULT 1,
+  phase TEXT NOT NULL DEFAULT 'lobby', 
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
 
-To learn more about Next.js, take a look at the following resources:
+-- 3. ベット（賭け）履歴テーブル
+CREATE TABLE bets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_id UUID REFERENCES teams(id) NOT NULL,
+  game TEXT NOT NULL,
+  target TEXT NOT NULL,
+  amount BIGINT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+-- Realtimeを有効化
+ALTER PUBLICATION supabase_realtime ADD TABLE teams;
+ALTER PUBLICATION supabase_realtime ADD TABLE game_state;
+ALTER PUBLICATION supabase_realtime ADD TABLE bets;
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+-- 初期データ: game_stateに1レコード挿入
+INSERT INTO game_state (id, phase, metadata) VALUES (1, 'lobby', '{}'::jsonb);
+```
 
-## Deploy on Vercel
+**借金システムのマイグレーション（追加機能）:**
+```sql
+-- teams テーブルに debt_count カラムを追加
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS debt_count INT NOT NULL DEFAULT 0;
+UPDATE teams SET debt_count = 0 WHERE debt_count IS NULL;
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. 環境変数の設定
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`.env.local` ファイルを確認（既に設定済み）：
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+### 4. 開発サーバーの起動
+```bash
+npm run dev
+```
+
+http://localhost:3000 でアクセス可能
+
+## 📱 画面構成
+
+### 1. ホーム画面 (`/`)
+- ゲーム紹介
+- 各画面へのナビゲーション
+
+### 2. 管理画面 (`/admin`)
+- チーム管理（追加・削除・URLコピー・融資）
+- リアルタイムチーム一覧とAR残高表示
+- 借金回数と返済額の表示
+- ゲーム進行管理（フェーズ切り替え）
+- 各ゲームの結果確定処理
+- Game 3の入札リセット機能
+
+### 3. チーム専用画面 (`/team/[team_id]`)
+- チーム名とAR残高のリアルタイム表示
+- スロット風の数字アニメーション
+- WIN演出（紙吹雪 + JACKPOT表示）
+- LOSE演出（赤フラッシュ）
+- 債務者バッジ表示
+- 借金情報と最終スコア表示
+- フェーズに応じたベット・入札UI
+- Game 1: ターゲット名と金額を入力してベット
+- Game 2: AまたはBを選択してベット
+- Game 3: 入札額を入力してビッド
+
+### 4. メインスクリーン (`/screen`)
+- 全チームのランキング表示
+- リアルタイムAR残高更新（スロット風アニメーション）
+- 債務者バッジと最終スコア表示
+- 大画面表示用（プロジェクター推奨）
+
+### 5. 最終結果画面 (`/results`)
+- 最終スコアランキング（AR残高 - 借金返済額）
+- アニメーション演出付き
+- 優勝チーム表示
+- 紙吹雪エフェクト
+
+## 🎯 ゲームの進め方
+
+### 事前準備
+1. 管理画面 (`/admin`) でチームを登録
+2. 各チームに専用URLを配布（URLコピーボタン使用）
+3. メインスクリーン (`/screen`) をプロジェクターに表示
+
+### Game 1の進行
+1. 管理画面でフェーズを「Game 1」に切り替え
+2. 各チームが投資先（ターゲット）と金額を入力してベット
+3. 結果が確定したら、管理画面で「勝者」と「オッズ」を入力して確定
+4. 自動的に配当が計算され、勝者チームにARが加算される
+
+### Game 2の進行
+1. 管理画面でフェーズを「Game 2」に切り替え
+2. 各チームがAまたはBを選択してベット
+3. 管理画面で「少数決で結果確定」ボタンをクリック
+4. 自動的に少数派が判定され、ポットが山分けされる
+
+### Game 3の進行
+1. 管理画面でフェーズを「Game 3」に切り替え
+2. 各チームが入札額を入力（現在の最高額より高い必要あり）
+3. 入札終了後、管理画面で効果（倍増/半減/略奪）を選択
+4. 「効果を適用」ボタンで最高入札者に効果が適用される
+
+## 💰 借金システム
+
+### 融資機能
+- 管理画面から各チームに「30万AR」を融資可能
+- 融資実行で `debt_count` が +1
+- 返済額は「50万AR」（借金1回あたり）
+
+### 債務者表示
+- 借金があるチームには「💀 債務者」バッジが表示される
+- 全画面で借金回数と返済額が表示される
+
+### 最終スコア計算
+```
+最終スコア = AR残高 - (借金回数 × 500,000)
+```
+
+例:
+- AR残高: 1,200,000
+- 借金回数: 2回
+- 最終スコア: 1,200,000 - (2 × 500,000) = 200,000
+
+### 戦略的な使い方
+- 序盤で資金が足りない時の緊急融資
+- ハイリスク・ハイリターンの賭けに出る際の資金調達
+- 返済額が大きいため、計画的な利用が必要
+
+## 🎨 カジノ風UIアニメーション
+
+### スロット風数字アニメーション
+- AR残高が変動する際、数字が高速でカウントアップ/ダウン
+- `react-countup` を使用したスムーズなアニメーション
+
+### WIN演出
+- AR残高が増加した瞬間に発動
+- 画面全体に紙吹雪が降る（`canvas-confetti`）
+- 「JACKPOT!」の文字が画面中央にポップアップ（`framer-motion`）
+
+### LOSE演出
+- AR残高が減少した時に発動
+- 画面が赤くフラッシュ
+- 視覚的に損失を強調
+
+### 最終結果画面の演出
+- チームごとに順番にフェードイン
+- 優勝チーム発表時に大量の紙吹雪
+- グラデーションカードでゴージャス感を演出
+
+## 🔧 技術スタック
+
+- **フレームワーク**: Next.js 16 (App Router)
+- **言語**: TypeScript
+- **スタイリング**: Tailwind CSS
+- **UIコンポーネント**: shadcn/ui
+- **データベース**: Supabase (PostgreSQL)
+- **リアルタイム**: Supabase Realtime
+- **アニメーション**: framer-motion, react-countup, canvas-confetti
+
+## 🎨 デザインテーマ
+
+- カジノ × サイバーパンク
+- 背景: 黒 (bg-zinc-950)
+- アクセントカラー: ネオンゴールド (#ffd700), ネオングリーン (#39ff14)
+- ネオンエフェクト: グロー効果でサイバーパンクな雰囲気
+
+## 📝 APIルート
+
+### ゲーム進行
+- `POST /api/game/set-phase` - ゲームフェーズを変更
+- `POST /api/game/bet` - ベットを配置（Game 1, 2）
+- `POST /api/game/game1-resolve` - Game 1の結果確定
+- `POST /api/game/game2-resolve` - Game 2の結果確定
+- `POST /api/game/game3-bid` - Game 3の入札
+- `POST /api/game/game3-apply` - Game 3の効果適用
+- `POST /api/game/game3-reset` - Game 3の入札リセット
+- `GET /api/game/final-scores` - 最終スコア取得
+
+### チーム管理
+- `POST /api/team/loan` - チームに融資を実行
+
+## ⚡️ リアルタイム機能
+
+すべての画面でSupabase Realtimeを使用：
+- チーム残高の即座更新
+- ゲームフェーズの同期
+- ランキングの自動更新
+- 入札状況のリアルタイム表示
+
+## 🎭 本番使用時の注意点
+
+1. チーム追加は事前に行い、ゲーム中の追加・削除は避ける
+2. 各ゲームの結果確定は慎重に（元に戻せない）
+3. メインスクリーンは大画面で表示推奨
+4. 各チームのURLは事前に配布しておく
+5. ネットワーク環境が安定していることを確認
+
+---
+
+**Powered by Next.js + Supabase**

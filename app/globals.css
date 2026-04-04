@@ -122,9 +122,56 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-zinc-950 text-foreground;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* ネオン効果 */
+.neon-gold {
+  color: #ffd700;
+  text-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700, 0 0 20px #ffd700;
+}
+
+.neon-green {
+  color: #39ff14;
+  text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 20px #39ff14;
+}
+
+.neon-border-gold {
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700;
+}
+
+.neon-border-green {
+  border: 2px solid #39ff14;
+  box-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
+}
+
+/* アニメーション */
+@keyframes flash {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
 }
